@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/athiramjayaprasad/ecommerse-go/database"
 	"github.com/athiramjayaprasad/ecommerse-go/models"
+	generate "github.com/athiramjayaprasad/ecommerse-go/tokens"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
@@ -83,16 +85,75 @@ func SignUp() gin.HandlerFunc {
 		user.ID = primitive.NewObjectID()
 		user.User_Id = user.ID.Hex()
 
-		token, refreshtoken, _ := generate.TokenGenerator                                                                   
-		user.Token 
-		user.Refresh_Token
-		user.User_Cart
-		user.Address_Details
-		user.Order_Status
+		token, refreshtoken, _ := generate.TokenGenerator(*user.Email, *user.First_Name, *user.Last_Name, *&user.User_Id)                                                                 
+		user.Token = &token
+		user.Refresh_Token = &refreshtoken
+		user.User_Cart = make([]models.ProductUser, 0)
+		user.Address_Details = make([]models.Address, 0)
+		user.Order_Status = make([]models.Order, 0)
+		_, insert_err := UserCollection.InsertOne(ctx, user)
+		if insert_err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"The user did not get created"})
+			return
+		}
+		defer cancel()
+
+		c.JSON(http.StatusCreated, "Successfully signed in!")
 	}  
 }
+
+func Login() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		var user models.User
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		}
+
+		var found_user models.User
+		err := UserCollection.FindOne(ctx, bson.M{"email":user.Email}).Decode(&found_user)
+		defer cancel()
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "login or password incorrect"})
+			return
+		}
+
+		PasswordIsValid, msg := VerifyPassword(*user.Password, *found_user.Password)
+		defer cancel()
+
+		if !PasswordIsValid {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			fmt.Println(msg)
+			return
+		}
+		token, refresh_token, _ := generate.TokenGenerator(*found_user.Email, *found_user.First_Name, *found_user.Last_Name, *&found_user.User_Id)
+		defer cancel()
+		generate.UpdateAllTokens(token, refresh_token, found_user.User_Id)
+
+		c.JSON(http.StatusFound, found_user)
+
+	}
+}
 func ProductViewerAdmin() gin.HandlerFunc { 
-	                                    
+	return func(c *gin.Context) {
+		var ctx, cancel =  context.WithTimeout(context.Background(), 100*time.Second)
+		var products models.Product
+		defer cancel()
+		if err := c.BindJSON(&products); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error":err.Error()})
+			return
+		}
+		products.Product_Id = primitive.NewObjectID()
+		_, anyerr := ProductCollection.InsertOne(ctx, products)
+		if anyerr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"Not inserted"})
+			return
+		}
+		defer cancel()
+		c.JSON(http.StatusOK, "successfully added")         
+	}                                 
 }
 func SearchProduct() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -165,4 +226,4 @@ func SearchProductByQuery() gin.HandlerFunc {
 		c.IndentedJSON(200, searchProducts)                                                     
 	}                                         
 	
-}
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
