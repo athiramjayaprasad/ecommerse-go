@@ -47,7 +47,7 @@ func AddAddress() gin.HandlerFunc {
 		if err = point_cursor.All(ctx, &address_info); err != nil {
 			panic(err)
 		}
-
+    
 		var size int32
 		for _, address_no := range address_info {
 			count := address_no["count"]
