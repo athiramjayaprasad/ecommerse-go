@@ -85,7 +85,10 @@ func SignUp() gin.HandlerFunc {
 		user.ID = primitive.NewObjectID()
 		user.User_Id = user.ID.Hex()
 
-		token, refreshtoken, _ := generate.TokenGenerator(*user.Email, *user.First_Name, *user.Last_Name, *&user.User_Id)                                                                 
+		token, refreshtoken, err := generate.TokenGenerator(*user.Email, *user.First_Name, *user.Last_Name, user.User_Id)
+		if err != nil {
+			panic(err)
+		}                                                           
 		user.Token = &token
 		user.Refresh_Token = &refreshtoken
 		user.User_Cart = make([]models.ProductUser, 0)
@@ -128,7 +131,10 @@ func Login() gin.HandlerFunc {
 			fmt.Println(msg)
 			return
 		}
-		token, refresh_token, _ := generate.TokenGenerator(*found_user.Email, *found_user.First_Name, *found_user.Last_Name, *&found_user.User_Id)
+		token, refresh_token, err := generate.TokenGenerator(*found_user.Email, *found_user.First_Name, *found_user.Last_Name, found_user.User_Id)
+		if err != nil {
+			panic(err)
+		}
 		defer cancel()
 		generate.UpdateAllTokens(token, refresh_token, found_user.User_Id)
 
