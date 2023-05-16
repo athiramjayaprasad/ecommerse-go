@@ -3,9 +3,7 @@ package tokens
 import (
 	"context"
 	"log"
-	"os"
 	"time"
-
 	"github.com/athiramjayaprasad/ecommerse-go/database"
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,7 +24,7 @@ type SignedDetails struct {
 }
 
 var UserData *mongo.Collection = database.UserData(database.Client, "Users")
-var SECRET_KEY = os.Getenv("SECRET_KEY")
+var SECRET_KEY = "my-32-character-ultra-secure-and-ultra-long-secret"
 
 func TokenGenerator( email string, first_name string, last_name string, uid string)(signed_token string, signed_refresh_token string, err error)  {
 	claims := &SignedDetails{
@@ -43,12 +41,13 @@ func TokenGenerator( email string, first_name string, last_name string, uid stri
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(168)).Unix(),
 		},
 	}
-	token, err := jwt.NewWithClaims(jwt.SigningMethodES256, claims).SignedString([]byte(SECRET_KEY))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
+
 	if err != nil {
 		return "", "", err
 	}
 
-	refresh_token, err := jwt.NewWithClaims(jwt.SigningMethodES384, refresh_claims).SignedString([]byte(SECRET_KEY))
+	refresh_token, err := jwt.NewWithClaims(jwt.SigningMethodHS384, refresh_claims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
 		log.Panic(err)
 		return
